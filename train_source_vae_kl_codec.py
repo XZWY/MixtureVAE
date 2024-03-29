@@ -66,7 +66,7 @@ def train(rank, a, h):
     else:
         state_dict_g = load_checkpoint(cp_g, device)
         state_dict_do = load_checkpoint(cp_do, device)
-        sourceVAE.load_state_dict(state_dict_g['sourceVAE'])
+        sourceVAE.load_state_dict(state_dict_g['sourcevae'])
 
         mpd.load_state_dict(state_dict_do['mpd'])
         msd.load_state_dict(state_dict_do['msd'])
@@ -298,7 +298,7 @@ def train(rank, a, h):
                             'msd': (msd.module
                                     if h.num_gpus > 1 else msd).state_dict(),
                             'mstftd': (mstftd.module
-                                       if h.num_gpus > 1 else msd).state_dict(),
+                                       if h.num_gpus > 1 else mstftd).state_dict(),
                             'optim_g':
                             optim_g.state_dict(),
                             'optim_d':

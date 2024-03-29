@@ -1,10 +1,11 @@
-export PYTHONPATH=/media/synrg/NVME-2TB/alanweiyang/MixVAE
+export PYTHONPATH=/ws/ifp-54_2/hasegawa/xulinf2/MixtureVAE
 
-export CUDA_VISIBLE_DEVICES=0,1
-musdb_root_path='/media/synrg/NVME-2TB/alanweiyang/datasets/musdb18'
-vocalset_root_path='/media/synrg/NVME-2TB/alanweiyang/datasets/vocalset11'
-config_path="/media/synrg/NVME-2TB/alanweiyang/MixVAE/config_SourceVAE.json"
-log_root="/media/synrg/NVME-2TB/alanweiyang/MixVAE/log_files/log_test_vae_kl_codec_100"
+export CUDA_VISIBLE_DEVICES=1
+musdb_root_path='/ws/ifp-54_2/hasegawa/xulinf2/datasets/musdb18'
+vocalset_root_path='/ws/ifp-54_2/hasegawa/xulinf2/datasets/vocalset11'
+config_path="/ws/ifp-54_2/hasegawa/xulinf2/MixtureVAE/config_SourceVAE.json"
+# config_path="/ws/ifp-54_2/hasegawa/xulinf2/MixtureVAE/log_files/log_test_vae_kl_codec_100_256bn/config.json"
+log_root="/ws/ifp-54_2/hasegawa/xulinf2/MixtureVAE/log_files/log_test_vae_kl_codec_1000_128bn"
 
 echo "Train model..."
 python train_source_vae_kl_codec.py \

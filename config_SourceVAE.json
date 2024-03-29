@@ -1,7 +1,7 @@
 {
     "source_type": "other",
     "resblock": "1",
-    "num_gpus": 2,
+    "num_gpus": 1,
     "batch_size": 4,
     "learning_rate": 0.0002,
     "adam_b1": 0.5,
@@ -9,7 +9,7 @@
     "lr_decay": 0.98,
     "seed": 1234,
     "codec_loss": false,
-    "lambda_kl": 100,
+    "lambda_kl": 1000,
 
     "seconds":4,
 
