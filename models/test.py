@@ -3,7 +3,7 @@ from models.env import *
 import json
 from data.dataset_musdb import dataset_musdb, collate_func_musdb
 from data.dataset_vocal import dataset_vocal, collate_func_vocals
-from models.SourceVAE import SourceVAE
+from models.SourceVAESB import SourceVAESB
 from models.loss import loss_vae_reconstruction
 from torch.utils.data import DistributedSampler, DataLoader
 
@@ -24,15 +24,15 @@ h = AttrDict(json_config)
 
 if h.source_type=='vocals':
     dataset = dataset_vocal(
-        musdb_root='/media/synrg/NVME-2TB/alanweiyang/datasets/musdb18',
-        vocalset_root='/media/synrg/NVME-2TB/alanweiyang/datasets/vocalset11',
+        musdb_root='/data/romit/alan/musdb18',
+        vocalset_root='/data/romit/alan/vocalset11',
         sample_rate=16000,
         mode='train',
         seconds=4,
     )
 else:
     dataset = dataset_musdb(
-        root_dir='/media/synrg/NVME-2TB/alanweiyang/datasets/musdb18',
+        root_dir='/data/romit/alan/musdb18',
         sample_rate=16000,
         mode='train',
         source_types=[h.source_type],
@@ -53,7 +53,7 @@ batch = collate_func([dataset[0], dataset[1]])
 
 # print(emb.shape, output.shape)
 
-sourcevae = SourceVAE(h)
+sourcevae = SourceVAESB(h)
 batch = sourcevae(batch)
 
 train_loader = DataLoader(
