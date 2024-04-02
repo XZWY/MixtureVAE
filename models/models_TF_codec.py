@@ -170,7 +170,7 @@ class Generator(torch.nn.Module):
         self.res_list = nn.ModuleList(res_list)
         
         self.conv_list.apply(init_weights)
-        self.conv_post = weight_norm(nn.Conv2d(16, 2, (5,5), (1,1), padding=(2,2)))
+        self.conv_post = weight_norm(nn.Conv2d(channels[0], 2, (5,5), (1,1), padding=(2,2)))
         self.conv_post.apply(init_weights)
 
         self.conv_pre = weight_norm(nn.Conv1d(bottleneck_dim, 2*channels[-1], 1, 1))
@@ -224,8 +224,8 @@ class Generator(torch.nn.Module):
         remove_weight_norm(self.conv_pre)
         
 if __name__=='__main__':
-    encoder = Encoder(bottleneck_dim=128)
-    decoder = Generator(bottleneck_dim=128)
+    encoder = Encoder(channels=[2, 32, 64, 128, 256, 256, 256], bottleneck_dim=128)
+    decoder = Generator(channels=[32, 64, 128, 256, 256, 256, 256], bottleneck_dim=128)
     input = torch.randn(3, 1, 16000*4)
     emb = encoder(input)
     print(emb.shape)

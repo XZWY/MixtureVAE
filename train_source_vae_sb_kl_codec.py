@@ -264,7 +264,8 @@ def train(rank, a, h):
             loss_gen_s, losses_gen_s = generator_loss(y_ds_hat_g)
             loss_gen_stft, losses_gen_stft = generator_loss(y_stftd_hat_g)
             loss_kl = h.lambda_kl * batch['loss_KLD'].mean()
-            loss_gen_all = loss_gen_s + loss_gen_f + loss_gen_stft + loss_fm_s + loss_fm_f + loss_fm_stft + loss_mel + loss_kl
+            loss_l1 = 10 * batch['loss_l1']
+            loss_gen_all = loss_gen_s + loss_gen_f + loss_gen_stft + loss_fm_s + loss_fm_f + loss_fm_stft + loss_mel + loss_kl + loss_l1
 
             loss_gen_all.backward()
             optim_g.step()
@@ -278,8 +279,8 @@ def train(rank, a, h):
                     #     format(steps, loss_gen_all.item(), loss_kl.item(), loss_l1.item(), mel_error,
                     #            time.time() - start_b))
                     print(
-                        'Steps : {:d}, Gen Loss Total : {:4.3f}, loss kl : {:4.3f}, Mel-Spec. Error : {:4.3f}, s/b : {:4.3f}'.
-                        format(steps, loss_gen_all.item(), loss_kl.item(), mel_error, time.time() - start_b))
+                        'Steps : {:d}, Gen Loss Total : {:4.3f}, loss kl : {:4.3f}, Mel-Spec. Error : {:4.3f}, L1 Error : {:4.3f}, s/b : {:4.3f}'.
+                        format(steps, loss_gen_all.item(), loss_kl.item(), mel_error, loss_l1.item(), time.time() - start_b))
                 # checkpointing
                 if steps % a.checkpoint_interval == 0 and steps != 0:
                     checkpoint_path = "{}/g_{:08d}".format(a.checkpoint_path,
@@ -316,6 +317,7 @@ def train(rank, a, h):
                     sw.add_scalar("training/gen_loss_total", loss_gen_all, steps)
                     sw.add_scalar("training/loss_kl", loss_kl, steps)
                     sw.add_scalar("training/mel_spec_error", mel_error, steps)
+                    sw.add_scalar("training/l1_loss", loss_l1, steps)
 
                 # Validation
                 if steps % a.validation_interval == 0 and steps != 0:
@@ -324,6 +326,7 @@ def train(rank, a, h):
                     torch.cuda.empty_cache()
                     val_err_tot = 0
                     val_kl_tot = 0
+                    val_l1_tot = 0
                     with torch.no_grad():
                         for j, batch in enumerate(validation_loader):
                             if j > 40:
@@ -348,6 +351,7 @@ def train(rank, a, h):
                                 y_mel[:, :, :i_size],
                                 y_g_hat_mel[:, :, :i_size]).item()
                             val_kl_tot += batch['loss_KLD'].clone().mean().item()
+                            val_l1_tot += batch['loss_l1'].clone().item()
 
                             if j <= 8:
                                 # if steps == 0:
@@ -378,8 +382,10 @@ def train(rank, a, h):
 
                         val_err = val_err_tot / (j + 1)
                         val_kl = val_kl_tot / (j + 1)
+                        val_l1 = val_l1_tot / (j + 1)
                         sw.add_scalar("validation/mel_spec_error", val_err, steps)
                         sw.add_scalar("validation/kl_divergence", val_kl, steps)
+                        sw.add_scalar("validation/l1_loss", val_l1, steps)
                         if not plot_gt_once:
                             plot_gt_once = True
 

@@ -67,7 +67,7 @@ class dataset_musdb(Dataset):
                 track.chunk_start = random.uniform(0, track.duration - track.chunk_duration)
             elif self.mode=='validation':
                 track.chunk_start = track.chunk_start + self.seconds
-                assert track.chunk_start + self.seconds > track.duration, 'sample contains no sound'                
+                assert track.chunk_start + self.seconds < track.duration, 'sample contains no sound'                
                     
             
             batch = {}
@@ -121,25 +121,30 @@ if __name__=='__main__':
     from tqdm import tqdm
     import matplotlib.pyplot as plt
     dataset = dataset_musdb(
-        root_dir='/media/synrg/NVME-2TB/alanweiyang/datasets/musdb18',
+        root_dir='/data/romit/alan/musdb18',
         sample_rate=16000,
-        mode='train',
-        source_types=['vocals', 'drums', 'bass', 'other'],
+        mode='validation',
+        source_types=['other'],
         mixture=False,
-        seconds=4)
-    c = {}
-    source_types=['vocals', 'drums', 'bass', 'other']
-    for source_type in source_types:
-        c[source_type] = []
-    for i in tqdm(range(len(dataset))):
-        for j in range(2):
-    # for i in tqdm(range(2)):
+        seconds=4,
+        len_ds=100
+        )
+    for i in range(len(dataset)):
+        print(i)
+        dataset[i]
+    # c = {}
+    # source_types=['vocals', 'drums', 'bass', 'other']
+    # for source_type in source_types:
+    #     c[source_type] = []
+    # for i in tqdm(range(len(dataset))):
     #     for j in range(2):
-            batch = dataset[i]
-            for source_type in source_types:
-                c[source_type].append(batch[source_type].max())
-    for source_type in source_types:
-        # print(source_type, c[source_type])
-        plt.figure()
-        plt.hist(c[source_type])
-        plt.savefig(source_type+'.png')
+    # # for i in tqdm(range(2)):
+    # #     for j in range(2):
+    #         batch = dataset[i]
+    #         for source_type in source_types:
+    #             c[source_type].append(batch[source_type].max())
+    # for source_type in source_types:
+    #     # print(source_type, c[source_type])
+    #     plt.figure()
+    #     plt.hist(c[source_type])
+    #     plt.savefig(source_type+'.png')

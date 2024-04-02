@@ -118,7 +118,7 @@ class SourceVAESB(nn.Module):
         batch['output'] = dec
         batch['loss_KLD'] = posterior.kl()
         # batch['loss_reconstruction'] = self.reconstruction_loss(input, dec)
-        # batch['loss_l1'] = loss_l1(ref.squeeze(1), dec.squeeze(1))
+        batch['loss_l1'] = loss_l1(ref.squeeze(1), dec.squeeze(1))
         # batch['loss_snr'] = -snr(ref.squeeze(1), dec.squeeze(1))
 
         return batch
