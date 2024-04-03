@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from models.models_hificodec import Encoder, Generator
-from models.distributions import DiagonalGaussianDistribution
+from models.models_bandsplit import Encoder, Generator
+from models.distributions2d import DiagonalGaussianDistribution
 import torchaudio.transforms as T
 import torch.nn.functional as F
 
@@ -72,8 +72,8 @@ class SourceVAE(nn.Module):
         super().__init__()
 
         self.source_type = h.source_type
-        self.encoder = Encoder(h)
-        self.decoder = Generator(h)
+        self.encoder = Encoder(channels=[128, 128, 128, 128, 128, 128, 64], bottleneck_dim=h.bottleneck_dimension)
+        self.decoder = Generator(channels=[128, 128, 128, 128, 128, 128, 64], bottleneck_dim=h.bottleneck_dimension)
 
         self.embed_dim = h.bottleneck_dimension
         
@@ -114,6 +114,7 @@ class SourceVAE(nn.Module):
             self.flag_first_run = False
 
         dec = self.decode(z)
+        # print(dec.shape, 'asd')
         
         # add loss here
         batch['output'] = dec

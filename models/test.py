@@ -4,6 +4,7 @@ import json
 from data.dataset_musdb import dataset_musdb, collate_func_musdb
 from data.dataset_vocal import dataset_vocal, collate_func_vocals
 from models.SourceVAESB import SourceVAESB
+from models.SourceVAEBS import SourceVAE
 from models.loss import loss_vae_reconstruction
 from torch.utils.data import DistributedSampler, DataLoader
 
@@ -22,17 +23,20 @@ with open('../config_SourceVAE.json') as f:
 json_config = json.loads(data)
 h = AttrDict(json_config)
 
+musdb_root = '/media/synrg/NVME-2TB/alanweiyang/datasets/musdb18'
+vocalset_root = '/media/synrg/NVME-2TB/alanweiyang/datasets/vocalset11'
+
 if h.source_type=='vocals':
     dataset = dataset_vocal(
-        musdb_root='/data/romit/alan/musdb18',
-        vocalset_root='/data/romit/alan/vocalset11',
+        musdb_root=musdb_root,
+        vocalset_root=vocalset_root,
         sample_rate=16000,
         mode='train',
         seconds=4,
     )
 else:
     dataset = dataset_musdb(
-        root_dir='/data/romit/alan/musdb18',
+        root_dir=musdb_root,
         sample_rate=16000,
         mode='train',
         source_types=[h.source_type],
@@ -53,7 +57,7 @@ batch = collate_func([dataset[0], dataset[1]])
 
 # print(emb.shape, output.shape)
 
-sourcevae = SourceVAESB(h)
+sourcevae = SourceVAE(h)
 batch = sourcevae(batch)
 
 train_loader = DataLoader(
@@ -72,11 +76,10 @@ for i, batch in enumerate(train_loader):
         break
     print(batch[h.source_type].shape)
     batch = sourcevae(batch)
-    print(batch)
+    for key in batch.keys():
+        print(key, batch[key].shape)
 
-for key in batch.keys():
-    print(key, batch[key].shape)
-
+    # print(batch)
 # from models.loss import loss_vae_reconstruction
 # LOSS = loss_vae_reconstruction(h)
 # y = torch.randn(2,1,16000)
