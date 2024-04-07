@@ -4,7 +4,7 @@ import json
 from data.dataset_musdb import dataset_musdb, collate_func_musdb
 from data.dataset_vocal import dataset_vocal, collate_func_vocals
 from models.SourceVAESB import SourceVAESB
-from models.SourceVAEBS import SourceVAE
+from models.SourceVAESubband2 import SourceVAE
 from models.loss import loss_vae_reconstruction
 from torch.utils.data import DistributedSampler, DataLoader
 

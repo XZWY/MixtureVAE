@@ -64,7 +64,7 @@ config_path="/media/synrg/NVME-2TB/alanweiyang/MixVAE/config_SourceVAE_sb2.json"
 log_root="/media/synrg/NVME-2TB/alanweiyang/MixVAE/log_files/log_subband2"
 
 
-echo "Train model..."
+echo "Train model...train_source_vae_sb2"
 python3 train_source_vae_sb2.py \
     --musdb_root ${musdb_root_path}\
     --vocalset_root ${vocalset_root_path}\

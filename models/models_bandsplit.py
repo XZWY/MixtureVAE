@@ -55,7 +55,7 @@ class ResBlock(torch.nn.Module):
             remove_weight_norm(l)
             
 class Encoder(torch.nn.Module):
-    def __init__(self, channels=[128, 128, 128, 128, 128, 128, 64], bottleneck_dim=32):
+    def __init__(self, channels=[128, 128, 128, 128, 128, 128, 64], bottleneck_dim=32, fc_dim=128):
         super(Encoder, self).__init__()
         self.bottleneck_dim = bottleneck_dim
         self.bandsplit = BandSplitModule(
@@ -70,7 +70,7 @@ class Encoder(torch.nn.Module):
             ],
             t_timesteps=401,
             fc_dim=128,
-            is_layernorm=True
+            is_layernorm=False
         )
         self.channels = channels
         
@@ -155,7 +155,7 @@ class Encoder(torch.nn.Module):
         remove_weight_norm(self.conv_pre)
         
 class Generator(torch.nn.Module):
-    def __init__(self, channels=[64, 128, 128, 128, 128, 128, 128], bottleneck_dim=128):
+    def __init__(self, channels=[64, 128, 128, 128, 128, 128, 128], bottleneck_dim=128, fc_dim=128):
         super(Generator, self).__init__()
         
         self.bandmerge = BandMergeModule(
@@ -163,7 +163,7 @@ class Generator(torch.nn.Module):
                 (1000, 100),
                 (4000, 250),
                 (7500, 500),],
-            fc_dim=128,
+            fc_dim=fc_dim,
             sr=16000,
             n_fft=1024
         )
@@ -200,7 +200,7 @@ class Generator(torch.nn.Module):
         self.res_list = nn.ModuleList(res_list)
         
         self.conv_list.apply(init_weights)
-        self.conv_post = weight_norm(nn.Conv2d(channels[0], 128, (1,1), (1,1)))
+        self.conv_post = weight_norm(nn.Conv2d(channels[0], fc_dim, (1,1), (1,1)))
         self.conv_post.apply(init_weights)
 
         self.conv_pre = weight_norm(nn.Conv2d(bottleneck_dim, channels[-1], 1, 1))
