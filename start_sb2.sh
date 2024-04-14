@@ -44,24 +44,24 @@
 #     --stdout_interval 5 \
 
 
-# export PYTHONPATH=/data/romit/alan/MixtureVAE
+export PYTHONPATH=/data/romit/alan/MixtureVAE
 
-# export CUDA_VISIBLE_DEVICES=0,1
-# musdb_root_path='/data/romit/alan/musdb18'
-# vocalset_root_path='/data/romit/alan/vocalset11'
-# config_path="/data/romit/alan/MixtureVAE/config_SourceVAESB.json"
-# # config_path="/ws/ifp-54_2/hasegawa/xulinf2/MixtureVAE/log_files/log_test_vae_kl_codec_100_256bn/config.json"
-# log_root="/data/romit/alan/MixtureVAE/log_files/log_testsb_100_128bn_l1loss"
-
-
-export PYTHONPATH=/media/synrg/NVME-2TB/alanweiyang/MixVAE
-
-export CUDA_VISIBLE_DEVICES=0,1
-musdb_root_path='/media/synrg/NVME-2TB/alanweiyang/datasets/musdb18'
-vocalset_root_path='/media/synrg/NVME-2TB/alanweiyang/datasets/vocalset11'
-config_path="/media/synrg/NVME-2TB/alanweiyang/MixVAE/config_SourceVAE_sb2.json"
+export CUDA_VISIBLE_DEVICES=1,2
+musdb_root_path='/data/romit/alan/musdb18'
+vocalset_root_path='/data/romit/alan/vocalset11'
+config_path="/data/romit/alan/MixtureVAE/config_SourceVAE_sb2_drum.json"
 # config_path="/ws/ifp-54_2/hasegawa/xulinf2/MixtureVAE/log_files/log_test_vae_kl_codec_100_256bn/config.json"
-log_root="/media/synrg/NVME-2TB/alanweiyang/MixVAE/log_files/log_subband2"
+log_root="/data/romit/alan/MixtureVAE/log_files/log_sb_drum"
+
+
+# export PYTHONPATH=/media/synrg/NVME-2TB/alanweiyang/MixVAE
+
+# export CUDA_VISIBLE_DEVICES=1,2
+# musdb_root_path='/media/synrg/NVME-2TB/alanweiyang/datasets/musdb18'
+# vocalset_root_path='/media/synrg/NVME-2TB/alanweiyang/datasets/vocalset11'
+# config_path="/media/synrg/NVME-2TB/alanweiyang/MixVAE/config_SourceVAE_sb2.json"
+# # config_path="/ws/ifp-54_2/hasegawa/xulinf2/MixtureVAE/log_files/log_test_vae_kl_codec_100_256bn/config.json"
+# log_root="/media/synrg/NVME-2TB/alanweiyang/MixVAE/log_files/log_subband2"
 
 
 echo "Train model...train_source_vae_sb2"

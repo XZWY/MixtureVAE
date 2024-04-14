@@ -72,8 +72,10 @@ def train(rank, a, h):
         mpd.load_state_dict(state_dict_do['mpd'])
         msd.load_state_dict(state_dict_do['msd'])
         mstftd.load_state_dict(state_dict_do['mstftd'])
-        steps = state_dict_do['steps'] + 1
-        last_epoch = state_dict_do['epoch']
+        # steps = state_dict_do['steps'] + 1
+        # last_epoch = state_dict_do['epoch']
+        steps = 0
+        last_epoch = -1
 
     if h.num_gpus > 1:
         sourceVAE = DistributedDataParallel(
