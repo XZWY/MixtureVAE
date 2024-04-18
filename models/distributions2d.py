@@ -58,6 +58,17 @@ class DiagonalGaussianDistribution(object):
                     + other.logvar,
                     dim=[1, 2, 3],
                 )
+    
+    # def loss_regularization(self, other):
+    #     '''
+    #         this function calculate the loss for mixture VAE
+    #     '''
+    #     return 0.5 * torch.mean(
+    #         torch.pow(self.mean, 2) + self.var
+    #         - other.logvar
+    #         - self.var / other.var
+    #         - torch.pow(self.mean - other.mean, 2) / other.var
+    #     )
 
     def nll(self, sample, dims=[1, 2, 3]):
         if self.deterministic:

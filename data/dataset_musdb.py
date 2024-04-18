@@ -121,16 +121,21 @@ if __name__=='__main__':
     from tqdm import tqdm
     import matplotlib.pyplot as plt
     dataset = dataset_musdb(
-        root_dir='/media/synrg/NVME-2TB/alanweiyang/datasets/musdb18',
+        root_dir='/data/romit/alan/musdb18',
         sample_rate=16000,
         mode='train',
-        source_types=['other'],
-        mixture=False,
+        source_types=['vocals', 'drums', 'bass', 'other'],
+        mixture=True,
         seconds=4,
         len_ds=100
         )
     batch = dataset[0]
-    sf.write('other'+'.wav', batch['other'], 16000)
+    batch = collate_func_musdb([dataset[0], dataset[1]])
+    for key in batch.keys():
+        print(key, batch[key].shape, type(batch[key]))
+        if type(batch[key])==torch.Tensor:
+            print(batch[key].shape)
+    # sf.write('other'+'.wav', batch['other'], 16000)
     # c = {}
     # source_types=['vocals', 'drums', 'bass', 'other']
     # for source_type in source_types:
