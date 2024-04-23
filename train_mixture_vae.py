@@ -34,6 +34,18 @@ from data.dataset_musdb import dataset_musdb, collate_func_musdb
 
 torch.backends.cudnn.benchmark = True
 
+# Helper function to select parameters
+def get_parameters(model, keyword):
+    for name, param in model.named_parameters():
+        if keyword in name:
+            yield param
+
+def default_mel(y, h):
+    return mel_spectrogram(
+        y.squeeze(1), h.n_fft, h.num_mels,
+        h.sampling_rate, h.hop_size, h.win_size, h.fmin,
+        h.fmax_for_loss)
+
 def train(rank, a, h):
     torch.cuda.set_device(rank)
     if h.num_gpus > 1:
@@ -46,13 +58,21 @@ def train(rank, a, h):
     torch.cuda.manual_seed(h.seed)
     device = torch.device('cuda:{:d}'.format(rank))
 
-    sourceVAE = SourceVAE(h).to(device)
+    
+    ckpt_vocals = torch.load(os.path.join(h.sourcevae_ckpt_dir, 'ckpt_vocals'))
+    ckpt_drums = torch.load(os.path.join(h.sourcevae_ckpt_dir, 'ckpt_drums'))
+    ckpt_bass = torch.load(os.path.join(h.sourcevae_ckpt_dir, 'ckpt_bass'))
+    ckpt_other = torch.load(os.path.join(h.sourcevae_ckpt_dir, 'ckpt_other'))
+    sourcevae_ckpts = {
+        'vocals':ckpt_vocals, 'drums':ckpt_drums, 'bass':ckpt_bass, 'other':ckpt_other
+    }
+    mixtureVAE = MixtureVAE(h, sourcevae_ckpts=sourcevae_ckpts).to(device)
 
-    mpd = MultiPeriodDiscriminator().to(device)
-    msd = MultiScaleDiscriminator().to(device)
-    mstftd = MultiScaleSTFTDiscriminator(32).to(device)
+    # mpd = MultiPeriodDiscriminator().to(device)
+    # msd = MultiScaleDiscriminator().to(device)
+    # mstftd = MultiScaleSTFTDiscriminator(32).to(device)
     if rank == 0:
-        print(sourceVAE)
+        print(mixtureVAE)
         os.makedirs(a.checkpoint_path, exist_ok=True)
         print("checkpoints directory : ", a.checkpoint_path)
 
@@ -67,63 +87,57 @@ def train(rank, a, h):
     else:
         state_dict_g = load_checkpoint(cp_g, device)
         state_dict_do = load_checkpoint(cp_do, device)
-        MixtureVAE.load_state_dict(state_dict_g['mixturevae'])
+        mixtureVAE.load_state_dict(state_dict_g['mixturevae'])
 
-        mpd.load_state_dict(state_dict_do['mpd'])
-        msd.load_state_dict(state_dict_do['msd'])
-        mstftd.load_state_dict(state_dict_do['mstftd'])
-        # steps = state_dict_do['steps'] + 1
-        # last_epoch = state_dict_do['epoch']
-        steps = 0
-        last_epoch = -1
+        # mpd.load_state_dict(state_dict_do['mpd'])
+        # msd.load_state_dict(state_dict_do['msd'])
+        # mstftd.load_state_dict(state_dict_do['mstftd'])
+        steps = state_dict_do['steps'] + 1
+        last_epoch = state_dict_do['epoch']
+        # steps = 0
+        # last_epoch = -1
 
     if h.num_gpus > 1:
-        sourceVAE = DistributedDataParallel(
-            sourceVAE, device_ids=[rank]).to(device)
-        mpd = DistributedDataParallel(mpd, device_ids=[rank]).to(device)
-        msd = DistributedDataParallel(msd, device_ids=[rank]).to(device)
-        mstftd = DistributedDataParallel(mstftd, device_ids=[rank]).to(device)
+        mixtureVAE = DistributedDataParallel(
+            mixtureVAE, device_ids=[rank],find_unused_parameters=True).to(device)
+        # mpd = DistributedDataParallel(mpd, device_ids=[rank]).to(device)
+        # msd = DistributedDataParallel(msd, device_ids=[rank]).to(device)
+        # mstftd = DistributedDataParallel(mstftd, device_ids=[rank]).to(device)
+
+    g_parameters = get_parameters(mixtureVAE, 'MixEncoder')
 
     optim_g = torch.optim.Adam(
-        itertools.chain(sourceVAE.parameters()),
+        itertools.chain(g_parameters),
         h.learning_rate,
         betas=[h.adam_b1, h.adam_b2])
-    optim_d = torch.optim.Adam(
-        itertools.chain(msd.parameters(), mpd.parameters(),
-                        mstftd.parameters()),
-        h.learning_rate,
-        betas=[h.adam_b1, h.adam_b2])
+    # optim_d = torch.optim.Adam(
+    #     itertools.chain(msd.parameters(), mpd.parameters(),
+    #                     mstftd.parameters()),
+    #     h.learning_rate,
+    #     betas=[h.adam_b1, h.adam_b2])
     if state_dict_do is not None:
         optim_g.load_state_dict(state_dict_do['optim_g'])
-        optim_d.load_state_dict(state_dict_do['optim_d'])
+        # optim_d.load_state_dict(state_dict_do['optim_d'])
 
     scheduler_g = torch.optim.lr_scheduler.ExponentialLR(
         optim_g, gamma=h.lr_decay, last_epoch=last_epoch)
-    scheduler_d = torch.optim.lr_scheduler.ExponentialLR(
-        optim_d, gamma=h.lr_decay, last_epoch=last_epoch)
+    # scheduler_d = torch.optim.lr_scheduler.ExponentialLR(
+    #     optim_d, gamma=h.lr_decay, last_epoch=last_epoch)
 
-    if h.source_type=='vocals':
-        trainset = dataset_vocal(
-            musdb_root=a.musdb_root,
-            vocalset_root=a.vocalset_root,
-            sample_rate=16000,
-            mode='train',
-            seconds=h.seconds,
-        )
-    else:
-        trainset = dataset_musdb(
-            root_dir=a.musdb_root,
-            sample_rate=16000,
-            mode='train',
-            source_types=[h.source_type],
-            mixture=False,
-            seconds=h.seconds,
-            len_ds=5000
-        )
+
+    trainset = dataset_musdb(
+        root_dir=a.musdb_root,
+        sample_rate=16000,
+        mode='train',
+        source_types=['vocals', 'drums', 'bass', 'other'],
+        mixture=True,
+        seconds=h.seconds,
+        len_ds=5000
+    )
 
     train_sampler = DistributedSampler(trainset) if h.num_gpus > 1 else None
 
-    collate_func = collate_func_vocals if h.source_type=='vocals' else collate_func_musdb
+    collate_func = collate_func_musdb
     train_loader = DataLoader(
         trainset,
         num_workers=h.num_workers,
@@ -136,24 +150,16 @@ def train(rank, a, h):
         )
 
     if rank == 0:
-        if h.source_type=='vocals':
-            validset = dataset_vocal(
-                musdb_root=a.musdb_root,
-                vocalset_root=a.vocalset_root,
-                sample_rate=16000,
-                mode='train',
-                seconds=h.seconds
-            )
-        else:
-            validset = dataset_musdb(
-                root_dir=a.musdb_root,
-                sample_rate=16000,
-                mode='train',
-                source_types=[h.source_type],
-                mixture=False,
-                seconds=h.seconds,
-                len_ds=5000
-            )
+
+        validset = dataset_musdb(
+            root_dir=a.musdb_root,
+            sample_rate=16000,
+            mode='train',
+            source_types=['vocals', 'drums', 'bass', 'other'],
+            mixture=True,
+            seconds=h.seconds,
+            len_ds=5000
+        )
         validation_loader = DataLoader(
             validset,
             num_workers=1,
@@ -165,10 +171,10 @@ def train(rank, a, h):
             collate_fn=collate_func)
         sw = SummaryWriter(os.path.join(a.checkpoint_path, 'logs'))
     plot_gt_once = False
-    sourceVAE.train()
+    mixtureVAE.train()
 
-    mpd.train()
-    msd.train()
+    # mpd.train()
+    # msd.train()
     for epoch in range(max(0, last_epoch), a.training_epochs):
         if rank == 0:
             start = time.time()
@@ -184,129 +190,53 @@ def train(rank, a, h):
                 if type(batch[key])==torch.Tensor:
                     batch[key] = torch.autograd.Variable(batch[key].to(device, non_blocking=True))
 
-            batch = sourceVAE(batch)
-            y_g_hat = batch['output'] # bs, 1, T
-            y = batch[h.source_type] # bs, 1, T
-            
-            # mel calculation (not vanilla)
-            y_g_hat_mel = mel_spectrogram(
-                    y_g_hat.squeeze(1), h.n_fft, h.num_mels, h.sampling_rate,
-                    h.hop_size, h.win_size, h.fmin,
-                    h.fmax_for_loss)  # 1024, 80, 24000, 240,1024
-            y_mel = mel_spectrogram(
-                    y.squeeze(1), h.n_fft, h.num_mels, h.sampling_rate,
-                    h.hop_size, h.win_size, h.fmin,
-                    h.fmax_for_loss)  # 1024, 80, 24000, 240,1024
-            
-            y_g_hat_mel = mel_spectrogram(
-                y_g_hat.squeeze(1), h.n_fft, h.num_mels, h.sampling_rate,
-                h.hop_size, h.win_size, h.fmin,
-                h.fmax_for_loss)  # 1024, 80, 24000, 240,1024
-            y_r_mel_1 = mel_spectrogram(
-                y.squeeze(1), 512, h.num_mels, h.sampling_rate, 120, 512,
-                h.fmin, h.fmax_for_loss)
-            y_g_mel_1 = mel_spectrogram(
-                y_g_hat.squeeze(1), 512, h.num_mels, h.sampling_rate, 120, 512,
-                h.fmin, h.fmax_for_loss)
-            y_r_mel_2 = mel_spectrogram(
-                y.squeeze(1), 256, h.num_mels, h.sampling_rate, 60, 256, h.fmin,
-                h.fmax_for_loss)
-            y_g_mel_2 = mel_spectrogram(
-                y_g_hat.squeeze(1), 256, h.num_mels, h.sampling_rate, 60, 256,
-                h.fmin, h.fmax_for_loss)
-            y_r_mel_3 = mel_spectrogram(
-                y.squeeze(1), 128, h.num_mels, h.sampling_rate, 30, 128, h.fmin,
-                h.fmax_for_loss)
-            y_g_mel_3 = mel_spectrogram(
-                y_g_hat.squeeze(1), 128, h.num_mels, h.sampling_rate, 30, 128,
-                h.fmin, h.fmax_for_loss)
+            batch = mixtureVAE(batch, sample_posterior=True, decode=False, train_source_decoder=False, train_source_encoder=False)
 
-            optim_d.zero_grad()
-
-            # MPD
-            y_df_hat_r, y_df_hat_g, _, _ = mpd(y, y_g_hat.detach())
-            loss_disc_f, losses_disc_f_r, losses_disc_f_g = discriminator_loss(
-                y_df_hat_r, y_df_hat_g)
-
-            # MSD
-            y_ds_hat_r, y_ds_hat_g, _, _ = msd(y, y_g_hat.detach())
-            loss_disc_s, losses_disc_s_r, losses_disc_s_g = discriminator_loss(
-                y_ds_hat_r, y_ds_hat_g)
-
-            y_disc_r, fmap_r = mstftd(y)
-            y_disc_gen, fmap_gen = mstftd(y_g_hat.detach())
-            loss_disc_stft, losses_disc_stft_r, losses_disc_stft_g = discriminator_loss(
-                y_disc_r, y_disc_gen)
-            loss_disc_all = loss_disc_s + loss_disc_f + loss_disc_stft
-
-            loss_disc_all.backward()
-            optim_d.step()
-
-            # Generator
             optim_g.zero_grad()
 
-            # L1 Mel-Spectrogram Loss (non-vanilla likeilihood loss (gan and mel))
-            # if steps < a.vanilla_steps and h.codec_loss:
-            loss_mel1 = F.l1_loss(y_r_mel_1, y_g_mel_1)
-            loss_mel2 = F.l1_loss(y_r_mel_2, y_g_mel_2)
-            loss_mel3 = F.l1_loss(y_r_mel_3, y_g_mel_3)
-            #print('loss_mel1, loss_mel2 ', loss_mel1, loss_mel2)
-            loss_mel = F.l1_loss(y_mel,
-                                y_g_hat_mel) * 45 + loss_mel1 + loss_mel2
-            # print('loss_mel ', loss_mel)
-            # assert 1==2
-            y_df_hat_r, y_df_hat_g, fmap_f_r, fmap_f_g = mpd(y, y_g_hat)
-            y_ds_hat_r, y_ds_hat_g, fmap_s_r, fmap_s_g = msd(y, y_g_hat)
-            y_stftd_hat_r, fmap_stftd_r = mstftd(y)
-            y_stftd_hat_g, fmap_stftd_g = mstftd(y_g_hat)
-            loss_fm_f = feature_loss(fmap_f_r, fmap_f_g)
-            loss_fm_s = feature_loss(fmap_s_r, fmap_s_g)
-            loss_fm_stft = feature_loss(fmap_stftd_r, fmap_stftd_g)
-            loss_gen_f, losses_gen_f = generator_loss(y_df_hat_g)
-            loss_gen_s, losses_gen_s = generator_loss(y_ds_hat_g)
-            loss_gen_stft, losses_gen_stft = generator_loss(y_stftd_hat_g)
-            loss_kl = h.lambda_kl * batch['loss_KLD'].mean()
+            loss_kl = h.lambda_kl * batch['loss_posterior_matching'].mean()
             # loss_l1 = 10 * batch['loss_l1']
-            loss_gen_all = loss_gen_s + loss_gen_f + loss_gen_stft + loss_fm_s + loss_fm_f + loss_fm_stft + loss_mel + loss_kl
+            loss_gen_all = loss_kl
 
             loss_gen_all.backward()
             optim_g.step()
             if rank == 0:
                 # STDOUT logging
                 if steps % a.stdout_interval == 0:
-                    with torch.no_grad():
-                        mel_error = F.l1_loss(y_mel, y_g_hat_mel).item()
+                    # with torch.no_grad():
+                        # mel_error = F.l1_loss(y_mel, y_g_hat_mel).item()
                     # print(
                     #     'Steps : {:d}, Gen Loss Total : {:4.3f}, loss KL : {:4.3f}, loss_l1 : {:4.3f}, Mel-Spec. Error : {:4.3f}, s/b : {:4.3f}'.
                     #     format(steps, loss_gen_all.item(), loss_kl.item(), loss_l1.item(), mel_error,
                     #            time.time() - start_b))
                     print(
-                        'Steps : {:d}, Gen Loss Total : {:4.3f}, loss kl : {:4.3f}, Mel-Spec. Error : {:4.3f}, s/b : {:4.3f}'.
-                        format(steps, loss_gen_all.item(), loss_kl.item(), mel_error, time.time() - start_b))
+                        'Steps : {:d}, Gen Loss Total : {:4.3f}, loss kl : {:4.3f}, s/b : {:4.3f}'.
+                        format(steps, loss_gen_all.item(), loss_kl.item(), time.time() - start_b))
                 # checkpointing
                 if steps % a.checkpoint_interval == 0 and steps != 0:
+                # if True:
                     checkpoint_path = "{}/g_{:08d}".format(a.checkpoint_path,
                                                            steps)
                     save_checkpoint(
                         checkpoint_path, {
-                            'sourcevae': (sourceVAE.module if h.num_gpus > 1
-                                          else sourceVAE).state_dict()
+                            'mixturevae': (mixtureVAE.module if h.num_gpus > 1
+                                          else mixtureVAE).state_dict()
                         },
                         num_ckpt_keep=a.num_ckpt_keep)
                     checkpoint_path = "{}/do_{:08d}".format(a.checkpoint_path,
                                                             steps)
                     save_checkpoint(
                         checkpoint_path, {
-                            'mpd': (mpd.module
-                                    if h.num_gpus > 1 else mpd).state_dict(),
-                            'msd': (msd.module
-                                    if h.num_gpus > 1 else msd).state_dict(),
-                            'mstftd': (mstftd.module
-                                       if h.num_gpus > 1 else mstftd).state_dict(),
+                            # 'mpd': (mpd.module
+                            #         if h.num_gpus > 1 else mpd).state_dict(),
+                            # 'msd': (msd.module
+                            #         if h.num_gpus > 1 else msd).state_dict(),
+                            # 'mstftd': (mstftd.module
+                            #            if h.num_gpus > 1 else mstftd).state_dict(),
                             'optim_g':
                             optim_g.state_dict(),
-                            'optim_d':
-                            optim_d.state_dict(),
+                            # 'optim_d':
+                            # optim_d.state_dict(),
                             'steps':
                             steps,
                             'epoch':
@@ -318,16 +248,16 @@ def train(rank, a, h):
                 # if True:
                     sw.add_scalar("training/gen_loss_total", loss_gen_all, steps)
                     sw.add_scalar("training/loss_kl", loss_kl, steps)
-                    sw.add_scalar("training/mel_spec_error", mel_error, steps)
+                    # sw.add_scalar("training/mel_spec_error", mel_error, steps)
                     # sw.add_scalar("training/l1_loss", loss_l1, steps)
 
                 # Validation
                 if steps % a.validation_interval == 0 and steps != 0:
                 # if True:
-                    sourceVAE.eval()
+                    mixtureVAE.eval()
                     torch.cuda.empty_cache()
                     val_err_tot = 0
-                    val_kl_tot = 0
+                    val_psm_tot = 0
                     # val_l1_tot = 0
                     with torch.no_grad():
                         for j, batch in enumerate(validation_loader):
@@ -336,67 +266,68 @@ def train(rank, a, h):
                             for key in batch.keys():
                                 if type(batch[key])==torch.Tensor:
                                     batch[key] = torch.autograd.Variable(batch[key].to(device, non_blocking=True))
-                            batch = sourceVAE(batch)
-                            y_g_hat = batch['output'] # bs, 1, T
-                            y = batch[h.source_type] # bs, 1, T # bs, 1, T
+
+                            batch = mixtureVAE(batch, sample_posterior=True, decode=True, train_source_decoder=False, train_source_encoder=False)
+
+                            # groundtruth sources
+                            y_vocals = batch['vocals']
+                            y_drums = batch['drums']
+                            y_bass = batch['bass']
+                            y_other = batch['other']
+
+                            # mixture separation samples after decoding
+                            y_mix_vocals = batch['vocals_dec_mix']
+                            y_mix_drums = batch['drums_dec_mix']
+                            y_mix_bass = batch['bass_dec_mix']
+                            y_mix_other = batch['other_dec_mix']
+
+                            y_vocals_mel, y_drums_mel, y_bass_mel, y_other_mel = default_mel(y_vocals, h), default_mel(y_drums, h), default_mel(y_bass, h), default_mel(y_other, h)
+                            y_mix_vocals_mel, y_mix_drums_mel, y_mix_bass_mel, y_mix_other_mel = default_mel(y_mix_vocals, h), default_mel(y_mix_drums, h), default_mel(y_mix_bass, h), default_mel(y_mix_other, h)
+
+                            i_size = min(y_vocals_mel.size(2), y_mix_vocals_mel.size(2))
                             
-                            y_mel = mel_spectrogram(
-                                y.squeeze(1), h.n_fft, h.num_mels,
-                                h.sampling_rate, h.hop_size, h.win_size, h.fmin,
-                                h.fmax_for_loss)
-                            y_g_hat_mel = mel_spectrogram(
-                                y_g_hat.squeeze(1), h.n_fft, h.num_mels,
-                                h.sampling_rate, h.hop_size, h.win_size, h.fmin,
-                                h.fmax_for_loss)
-                            i_size = min(y_mel.size(2), y_g_hat_mel.size(2))
-                            val_err_tot += F.l1_loss(
-                                y_mel[:, :, :i_size],
-                                y_g_hat_mel[:, :, :i_size]).item()
-                            val_kl_tot += batch['loss_KLD'].clone().mean().item()
-                            # val_l1_tot += batch['loss_l1'].clone().item()
+                            val_error_current = F.l1_loss(y_vocals_mel[:, :, :i_size], y_mix_vocals_mel[:, :, :i_size]).item() \
+                                                    + F.l1_loss(y_drums_mel[:, :, :i_size], y_mix_drums_mel[:, :, :i_size]).item() \
+                                                    + F.l1_loss(y_bass_mel[:, :, :i_size], y_mix_bass_mel[:, :, :i_size]).item() \
+                                                    + F.l1_loss(y_other_mel[:, :, :i_size], y_mix_other_mel[:, :, :i_size]).item()
+                            val_error_current /= 4
+                            val_err_tot += val_error_current
+                            val_psm_tot += h.lambda_kl * batch['loss_posterior_matching'].clone().mean().item()
 
-                            if j <= 8:
-                                # if steps == 0:
-                                # if not plot_gt_once:
-                                sw.add_audio('gt/y_{}'.format(j), y[0],
-                                                steps, h.sampling_rate)
-                                y_spec = mel_spectrogram(
-                                    y[0], h.n_fft, h.num_mels,
-                                    h.sampling_rate, h.hop_size, h.win_size,
-                                    h.fmin, h.fmax)
-                                sw.add_figure(
-                                    'generated/y_spec_{}'.format(j),
-                                    plot_spectrogram(
-                                        y_spec.squeeze(0).cpu().numpy()),
-                                    steps)
 
-                                sw.add_audio('generated/y_hat_{}'.format(j),
-                                             y_g_hat[0], steps, h.sampling_rate)
-                                y_hat_spec = mel_spectrogram(
-                                    y_g_hat[0], h.n_fft, h.num_mels,
-                                    h.sampling_rate, h.hop_size, h.win_size,
-                                    h.fmin, h.fmax)
-                                sw.add_figure(
-                                    'generated/y_hat_spec_{}'.format(j),
-                                    plot_spectrogram(
-                                        y_hat_spec.squeeze(0).cpu().numpy()),
-                                    steps)
+                            if j <= 5:
+                                sw.add_audio('gt_vocals/y_{}'.format(j), y_vocals, steps, h.sampling_rate)
+                                sw.add_audio('gt_drums/y_{}'.format(j), y_drums, steps, h.sampling_rate)
+                                sw.add_audio('gt_bass/y_{}'.format(j), y_bass, steps, h.sampling_rate)
+                                sw.add_audio('gt_other/y_{}'.format(j), y_other, steps, h.sampling_rate)
+
+                                sw.add_audio('mix_generated_vocals/y_hat_{}'.format(j), y_mix_vocals, steps, h.sampling_rate)
+                                sw.add_audio('mix_generated_drums/y_hat_{}'.format(j), y_mix_drums, steps, h.sampling_rate)
+                                sw.add_audio('mix_generated_bass/y_hat_{}'.format(j), y_mix_bass, steps, h.sampling_rate)
+                                sw.add_audio('mix_generated_other/y_hat_{}'.format(j), y_mix_other, steps, h.sampling_rate)
+
+                                # y_vocals_mel, y_drums_mel, y_bass_mel, y_other_mel = default_mel(y_vocals, h), default_mel(y_drums, h), default_mel(y_bass, h), default_mel(y_other, h)
+                                # y_mix_vocals_mel, y_mix_drums_mel, y_mix_bass_mel, y_mix_other_mel = default_mel(y_mix_vocals, h), default_mel(y_mix_drums, h), default_mel(y_mix_bass, h), default_mel(y_mix_other, h)
+                                
+                                # sw.add_figure('generated/y_spec_{}'.format(j), plot_spectrogram(y_spec.squeeze(0).cpu().numpy()), steps)
+                                # sw.add_audio('generated/y_hat_{}'.format(j), y_g_hat, steps, h.sampling_rate)
+                                # sw.add_figure('generated/y_hat_spec_{}'.format(j), plot_spectrogram(y_hat_spec.squeeze(0).cpu().numpy()), steps)
 
                         val_err = val_err_tot / (j + 1)
-                        val_kl = val_kl_tot / (j + 1)
+                        val_psm = val_psm_tot / (j + 1)
                         # val_l1 = val_l1_tot / (j + 1)
                         sw.add_scalar("validation/mel_spec_error", val_err, steps)
-                        sw.add_scalar("validation/kl_divergence", val_kl, steps)
+                        sw.add_scalar("validation/posterior matching KL loss", val_psm, steps)
                         # sw.add_scalar("validation/l1_loss", val_l1, steps)
                         if not plot_gt_once:
                             plot_gt_once = True
 
-                    sourceVAE.train()
+                    mixtureVAE.train()
 
             steps += 1
         scheduler_g.step()
         # if steps < a.vanilla_steps and h.codec_loss:
-        scheduler_d.step()
+        # scheduler_d.step()
 
         if rank == 0:
             print('Time taken for epoch {} is {} sec\n'.format(

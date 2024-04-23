@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from models.models_subband2_separator import MixtureEncoder
-from SourceVAESubband2 import SourceVAE
+from models.SourceVAESubband2 import SourceVAE
 from models.distributions2d import DiagonalGaussianDistribution
 import torchaudio.transforms as T
 import torch.nn.functional as F
@@ -17,22 +17,23 @@ class MixtureVAE(nn.Module):
         '''
             sourcevae checkpoints: sourcevae_ckpts(disctionary)
         '''
-        self.source_type = h.source_type
+        # self.source_type = h.source_type
         self.MixEncoder = MixtureEncoder(
             channels=[2, 64, 64, 64, 64, 128, 128],
             bottleneck_dim=h.bottleneck_dimension
         )
 
-        # assert sourcevae_ckpts==None, 'source vae checkpoints not provided!!!!!'
+        assert sourcevae_ckpts!=None, 'source vae checkpoints not provided!!!!!'
 
         classes = ['vocals', 'drums', 'bass', 'other']
         self.classes = classes
         sourcevaes = []
         for n_class in range(len(classes)):
             vae = SourceVAE(h)
-            # SourceVAE.load_state_dict(sourcevae_ckpts[classes[n_class]['sourcevae']])
-            SourceVAE.source_type=classes[n_class]
+            vae.load_state_dict(sourcevae_ckpts[classes[n_class]]['sourcevae'])
+            vae.source_type=classes[n_class]
             sourcevaes.append(vae)
+        print('--------------------------finish loading sourcevae checkpoints------------------------------------')
         self.sourcevaes = nn.ModuleList(sourcevaes)
 
         self.embed_dim = h.bottleneck_dimension
@@ -69,7 +70,23 @@ class MixtureVAE(nn.Module):
         return (vocals_dec, drums_dec, bass_dec, other_dec)
 
     def forward(self, batch, sample_posterior=True, decode=False, train_source_decoder=False, train_source_encoder=False):
-    
+        '''
+            forward mostly for training:
+                decode: whether we want to decode source signals, decode would also create a decoded mixture_hat, which is a sum of decoded sources
+                train_source_encoder: the source encoder's forward's gradients are calculated, weights updatable
+                train_source_decoder: the source decoder's forward's gradients are calculated, weight updatable
+            
+            a few notices for future reference:
+                supervised training:
+                    1. posterior matching only: decode=False, train_source_decoder=False, train_source_encoder=False
+                    2. posterior matching with learnable SourceVAE and source GAN: decode=True, train_source_encoder=True, train_source_decoder=True
+                supervised evaluation:
+                    decode = True, train_encoder=False, train_decoder=False
+                unsupervised training:
+                    1. no source encoder needed even, need to modify this function or create a new one, decode=True, train_source_decoder=True
+
+
+        '''
         input = batch['mixture']#.clone() # bs, 1, T
 
         posterior_vocals_mix, posterior_drums_mix, posterior_bass_mix, posterior_other_mix = self.encode(input) # encode scaled input (0.05, 0.95)
@@ -132,6 +149,12 @@ class MixtureVAE(nn.Module):
 
         return batch
 
+# Helper function to select parameters
+def get_parameters(model, keyword):
+    for name, param in model.named_parameters():
+        if keyword in name:
+            yield param
+
 if __name__=='__main__':
     from models.models_hificodec import *
     from models.env import *
@@ -141,6 +164,7 @@ if __name__=='__main__':
     from models.SourceVAESB import SourceVAESB
     from models.MixtureVAE import MixtureVAE
     from torch.utils.data import DistributedSampler, DataLoader
+    import os
 
     def get_n_params(model):
         pp=0
@@ -174,9 +198,32 @@ if __name__=='__main__':
         print(key, batch[key].shape)
         batch[key] = batch[key].cuda(6)
 
+    ckpt_dir = '/data/romit/alan/MixtureVAE/ckpt_source_vae'
+    ckpt_vocals = torch.load(os.path.join(ckpt_dir, 'ckpt_vocals'))
+    ckpt_drums = torch.load(os.path.join(ckpt_dir, 'ckpt_drums'))
+    ckpt_bass = torch.load(os.path.join(ckpt_dir, 'ckpt_bass'))
+    ckpt_other = torch.load(os.path.join(ckpt_dir, 'ckpt_other'))
+    sourcevae_ckpts = {
+        'vocals':ckpt_vocals, 'drums':ckpt_drums, 'bass':ckpt_bass, 'other':ckpt_other
+    }
 
-    mixturevae = MixtureVAE(h).cuda(6)
-    mixturevae(batch, decode=True, train_source_decoder=False, train_source_encoder=True)
+    # sourcevae = SourceVAE(h)
+    # sourcevae.source_type = 'other'
+    # sourcevae.load_state_dict(sourcevae_ckpts['other']['sourcevae'])
 
-    for key in batch.keys():
-        print(key, batch[key].shape)
+    mixturevae = MixtureVAE(h, sourcevae_ckpts=sourcevae_ckpts).cuda(6)
+    for n, p in mixturevae.named_parameters():
+        print(n, p.shape, 'MixEncoder' in n)
+    print('--------------------------------')
+    # g_parameters = get_parameters(mixturevae, 'MixEncoder')
+    # for p in g_parameters:
+    #     print(p.shape)
+
+    device = "cuda:6"
+    ckpt = torch.load('/data/romit/alan/MixtureVAE/log_files/log_mixvae_trial/g_00000000', map_location=device)
+    print(ckpt.keys())
+    mixturevae.load_state_dict(ckpt['mixturevae'])
+    # mixturevae(batch, decode=True, train_source_decoder=False, train_source_encoder=True)
+
+    # for key in batch.keys():
+    #     print(key, batch[key].shape)
