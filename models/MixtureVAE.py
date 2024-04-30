@@ -192,11 +192,11 @@ if __name__=='__main__':
         len_ds=5000)
 
     collate_func = collate_func_musdb
-    batch = collate_func([dataset[0], dataset[1]])
+    batch = collate_func([dataset[0]])
 
     for key in batch.keys():
         print(key, batch[key].shape)
-        batch[key] = batch[key].cuda(6)
+        batch[key] = batch[key].cuda(1)
 
     ckpt_dir = '/data/romit/alan/MixtureVAE/ckpt_source_vae'
     ckpt_vocals = torch.load(os.path.join(ckpt_dir, 'ckpt_vocals'))
@@ -211,7 +211,7 @@ if __name__=='__main__':
     # sourcevae.source_type = 'other'
     # sourcevae.load_state_dict(sourcevae_ckpts['other']['sourcevae'])
 
-    mixturevae = MixtureVAE(h, sourcevae_ckpts=sourcevae_ckpts).cuda(6)
+    mixturevae = MixtureVAE(h, sourcevae_ckpts=sourcevae_ckpts).cuda(1)
     for n, p in mixturevae.named_parameters():
         print(n, p.shape, 'MixEncoder' in n)
     print('--------------------------------')
@@ -219,11 +219,11 @@ if __name__=='__main__':
     # for p in g_parameters:
     #     print(p.shape)
 
-    device = "cuda:6"
-    ckpt = torch.load('/data/romit/alan/MixtureVAE/log_files/log_mixvae_trial/g_00000000', map_location=device)
-    print(ckpt.keys())
-    mixturevae.load_state_dict(ckpt['mixturevae'])
-    # mixturevae(batch, decode=True, train_source_decoder=False, train_source_encoder=True)
+    # device = "cuda:6"
+    # ckpt = torch.load('/data/romit/alan/MixtureVAE/log_files/log_mixvae_trial/g_00000000', map_location=device)
+    # print(ckpt.keys())
+    # mixturevae.load_state_dict(ckpt['mixturevae'])
+    mixturevae(batch, decode=True, train_source_decoder=True, train_source_encoder=True)
 
-    # for key in batch.keys():
-    #     print(key, batch[key].shape)
+    for key in batch.keys():
+        print(key, batch[key].shape)

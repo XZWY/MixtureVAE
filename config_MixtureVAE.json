@@ -3,7 +3,7 @@
     "sourcevae_ckpt_dir":"/data/romit/alan/MixtureVAE/ckpt_source_vae",
     "resblock": "1",
     "num_gpus": 6,
-    "batch_size": 18,
+    "batch_size": 12,
     "learning_rate": 0.0001,
     "adam_b1": 0.5,
     "adam_b2": 0.9,

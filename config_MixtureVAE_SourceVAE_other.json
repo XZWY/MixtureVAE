@@ -12,7 +12,8 @@
     "lr_decay": 0.98,
     "seed": 1234,
     "codec_loss": false,
-    "lambda_kl": 100,
+    "lambda_kl": 10,
+    "lambda_posterior": 50,
 
     "seconds":4,
 

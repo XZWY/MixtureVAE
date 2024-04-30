@@ -287,7 +287,7 @@ def train(rank, a, h):
             loss_gen_stft, losses_gen_stft = generator_loss(y_stftd_hat_g)
 
             loss_kl_source = h.lambda_kl * batch[h.source_type+'_loss_KLD'].mean()
-            loss_posterior_matching = h.lambda_kl * batch[h.source_type+'_loss_posterior_matching'].mean()
+            loss_posterior_matching = h.lambda_posterior * batch[h.source_type+'_loss_posterior_matching'].mean()
             # loss_l1 = 10 * batch['loss_l1']
             loss_gen_all = loss_gen_s + loss_gen_f + loss_gen_stft + loss_fm_s + loss_fm_f + loss_fm_stft + loss_mel + loss_kl_source + loss_posterior_matching
 
@@ -386,8 +386,8 @@ def train(rank, a, h):
 
                             val_err_tot += val_error_current
                             val_err_self_tot += val_error_original
-                            val_psm_tot += h.lambda_kl * batch[h.source_type+'_loss_posterior_matching'].clone().mean().item()
-                            val_kl_source_tot += h.lambda_kl * batch[h.source_type+'_loss_KLD'].clone().mean().item()
+                            val_psm_tot += batch[h.source_type+'_loss_posterior_matching'].clone().mean().item()
+                            val_kl_source_tot += batch[h.source_type+'_loss_KLD'].clone().mean().item()
 
                             if j <= 5:
                                 sw.add_audio('gt/y_{}'.format(j), y, steps, h.sampling_rate)

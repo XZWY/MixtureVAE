@@ -10,6 +10,8 @@ class MixtureVAE(nn.Module):
     def __init__(
         self,
         h,
+        load_model=True,
+        model_ckpt=None,
         load_source_vae=True,
         sourcevae_ckpt=None
     ):
@@ -24,16 +26,19 @@ class MixtureVAE(nn.Module):
             bottleneck_dim=h.bottleneck_dimension
         )
 
-        if load_source_vae:
-            assert sourcevae_ckpt!=None, 'source vae checkpoints not provided!!!!!'
+        self.embed_dim = h.bottleneck_dimension
+        self.flag_first_run=True
+        
+        self.sourcevae = SourceVAE(h)
+        if load_model:
+            assert model_ckpt!=None, 'model ckpt not provided!!!!!!!!!!!!!'
+            self.load_state_dict(model_ckpt['mixturevae'])
+            print('--------------------------finish loading mixturevae checkpoints------------------------------------')
 
-            self.sourcevae = SourceVAE(h)
+        elif load_source_vae:
+            assert sourcevae_ckpt!=None, 'source vae checkpoints not provided!!!!!'
             self.sourcevae.load_state_dict(sourcevae_ckpt['sourcevae'])
             print('--------------------------finish loading sourcevae checkpoints------------------------------------')
-
-        self.embed_dim = h.bottleneck_dimension
-                
-        self.flag_first_run=True
         
     def encode(self, x):
         '''
@@ -135,7 +140,7 @@ if __name__=='__main__':
             pp += nn
         return pp
 
-    with open('../config_MixtureVAE_single.json') as f:
+    with open('../config_MixtureVAE_other.json') as f:
         data = f.read()
 
     json_config = json.loads(data)
@@ -166,13 +171,14 @@ if __name__=='__main__':
     # sourcevae_ckpts = {
     #     'vocals':ckpt_vocals, 'drums':ckpt_drums, 'bass':ckpt_bass, 'other':ckpt_other
     # }
-
+    model_ckpt_dir = '/data/romit/alan/MixtureVAE/log_files/log_mixvae_other/ckpt_pretrained_mixvae_50000'
+    model_ckpt = torch.load(model_ckpt_dir)
     # sourcevae = SourceVAE(h)
     # sourcevae.source_type = 'other'
     # sourcevae.load_state_dict(sourcevae_ckpts['other']['sourcevae'])
-    mixturevae = MixtureVAE(h, load_source_vae=True, sourcevae_ckpt=ckpt_other).cuda(1)
-    for n, p in mixturevae.named_parameters():
-        print(n, p.shape, 'MixEncoder' in n)
+    mixturevae = MixtureVAE(h, load_model=True, model_ckpt=model_ckpt, load_source_vae=True, sourcevae_ckpt=ckpt_other).cuda(1)
+    # for n, p in mixturevae.named_parameters():
+    #     print(n, p.shape, 'MixEncoder' in n)
     print('--------------------------------')
     # g_parameters = get_parameters(mixturevae, 'MixEncoder')
     # for p in g_parameters:
