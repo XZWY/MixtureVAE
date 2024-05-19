@@ -1,11 +1,11 @@
 {
-    "source_type": "other",
+    "source_type": "all",
     "mixvae_ckpt_dir":"/data/romit/alan/MixtureVAE/ckpt_mixture_vae",
-    "do_ckpt_path":"/data/romit/alan/MixtureVAE/ckpt_mixture_vae/do_other",
+    "do_ckpt_path":"/data/romit/alan/MixtureVAE/ckpt_mixture_vae",
     "resblock": "1",
-    "num_gpus": 5,
-    "batch_size": 5,
-    "learning_rate": 0.00015,
+    "num_gpus": 4,
+    "batch_size": 4,
+    "learning_rate": 0.00006,
     "adam_b1": 0.5,
     "adam_b2": 0.9,
     "lr_decay": 0.98,
@@ -15,7 +15,7 @@
     "lambda_posterior": 50,
     "supervised_lambda": 0.2,
 
-    "seconds":4,
+    "seconds":5,
 
     "upsample_rates": [8,5,4,2],
     "upsample_kernel_sizes": [16,11,8,4],
@@ -45,7 +45,7 @@
 
     "dist_config": {
         "dist_backend": "nccl",
-        "dist_url": "tcp://localhost:59385",
+        "dist_url": "tcp://localhost:52183",
         "world_size": 1
     }
 }

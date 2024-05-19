@@ -642,20 +642,39 @@ def train(rank, a, h):
                                 val_error_original = F.l1_loss(y_mel[:, :, :i_size], y_source_mel[:, :, :i_size]).item()
                                 val_error_unsupervised = F.l1_loss(mixture_fma_mel[:, :, :i_size], dec_mixture_fma_mel[:, :, :i_size]).item()
 
+                                if source_type=='vocals':
+                                    val_vocals_err_tot += val_error_current
+                                elif source_type=='drums':
+                                    val_drums_err_tot += val_error_current
+                                elif source_type=='bass':
+                                    val_bass_err_tot += val_error_current
+                                elif source_type=='other':
+                                    val_other_err_tot += val_error_current
+
                                 val_err_tot += val_error_current
                                 val_err_self_tot += val_error_original
                                 val_unsup_err_tot += val_error_unsupervised
 
-                                if j <= 8:
+                                if j <= 12:
                                     sw.add_audio('gt/'+source_type+'/y_{}'.format(j), y, steps, h.sampling_rate)
                                     sw.add_audio('mix_generated/'+source_type+'/y_hat_{}'.format(j), y_mix, steps, h.sampling_rate)
                                     sw.add_audio('self_generated/'+source_type+'/y_hat_{}'.format(j), y_source, steps, h.sampling_rate)
                                     sw.add_audio('unsupervised/'+source_type+'/y_hat_{}'.format(j), batch[source_type+'_dec_fma'], steps, h.sampling_rate)
 
+                        val_err_vocals = val_vocals_err_tot / (j+1)
+                        val_err_drums = val_drums_err_tot / (j+1)
+                        val_err_bass = val_bass_err_tot / (j+1)
+                        val_err_other = val_other_err_tot / (j+1)
 
                         val_err = val_err_tot / (j + 1)
                         val_err_ori = val_err_self_tot / (j + 1)
                         val_err_unsup = val_unsup_err_tot / (j + 1)
+
+                        sw.add_scalar("validation/mel_spec_error_vocals", val_err_vocals, steps)
+                        sw.add_scalar("validation/mel_spec_error_drums", val_err_drums, steps)
+                        sw.add_scalar("validation/mel_spec_error_bass", val_err_bass, steps)
+                        sw.add_scalar("validation/mel_spec_error_other", val_err_other, steps)
+
                         sw.add_scalar("validation/mel_spec_error", val_err, steps)
                         sw.add_scalar("validation/mel_spec_error_original", val_err_ori, steps)
                         sw.add_scalar("validation/val_err_unsup", val_err_unsup, steps)

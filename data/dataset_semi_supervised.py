@@ -27,6 +27,7 @@ class dataset_semi_supervised(Dataset):
         mode='train',
         seconds=4,
         p=1,
+        source_types=['vocals', 'drums', 'bass', 'other']
     ):
         # assert mode in ['train'], 'only train mode allowed'
         self.mode = mode
@@ -41,7 +42,7 @@ class dataset_semi_supervised(Dataset):
             sample_rate=sample_rate,
             mode=mode,
             mixture=True,
-            source_types=['vocals', 'drums', 'bass', 'other'],
+            source_types=source_types,
             seconds=seconds,
             )
         self.p = p

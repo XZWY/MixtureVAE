@@ -54,15 +54,15 @@ def loss_l1(s, s_hat):
     s_hat: bs, T
     '''
     l1_time = F.l1_loss(s_hat, s)
-    window = (torch.hann_window(512) ** 0.5).to(s.device)
-    s_stft = torch.stft(input=s, n_fft=512, hop_length=256, win_length=512, window=window, center=True, pad_mode='reflect', normalized=True, onesided=None, return_complex=True)
-    s_hat_stft = torch.stft(input=s_hat, n_fft=512, hop_length=256, win_length=512, window=window, center=True, pad_mode='reflect', normalized=True, onesided=None, return_complex=True)
-    s_stft_mag = s_stft.abs()
-    s_hat_stft_mag = s_hat_stft.abs()
+    # window = (torch.hann_window(512) ** 0.5).to(s.device)
+    # s_stft = torch.stft(input=s, n_fft=512, hop_length=256, win_length=512, window=window, center=True, pad_mode='reflect', normalized=True, onesided=None, return_complex=True)
+    # s_hat_stft = torch.stft(input=s_hat, n_fft=512, hop_length=256, win_length=512, window=window, center=True, pad_mode='reflect', normalized=True, onesided=None, return_complex=True)
+    # s_stft_mag = s_stft.abs()
+    # s_hat_stft_mag = s_hat_stft.abs()
     
-    l1_freq = F.l1_loss(s_hat_stft_mag, s_stft_mag)
+    # l1_freq = F.l1_loss(s_hat_stft_mag, s_stft_mag)
     
-    return l1_time + l1_freq
+    return l1_time
 
 class SourceVAE(nn.Module):
     def __init__(
@@ -119,7 +119,7 @@ class SourceVAE(nn.Module):
         batch['loss_KLD'] = posterior.kl()
         # batch['loss_reconstruction'] = self.reconstruction_loss(input, dec)
         batch['loss_l1'] = loss_l1(ref.squeeze(1), dec.squeeze(1))
-        # batch['loss_snr'] = -snr(ref.squeeze(1), dec.squeeze(1))
+        batch['loss_snr'] = -snr(ref.squeeze(1), dec.squeeze(1))
 
         return batch
 

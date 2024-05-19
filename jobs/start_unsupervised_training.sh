@@ -1,11 +1,12 @@
 export PYTHONPATH=/data/romit/alan/MixtureVAE
 
-export CUDA_VISIBLE_DEVICES=7,6,5,4,3
+export CUDA_VISIBLE_DEVICES=7,6,5,4
+# export CUDA_VISIBLE_DEVICES=3,2
 musdb_root_path='/data/romit/alan/musdb18'
 vocalset_root_path='/data/romit/alan/vocalset11'
 config_path="/data/romit/alan/MixtureVAE/configs/config_MixtureVAE_fma_musdb.json"
 # config_path="/ws/ifp-54_2/hasegawa/xulinf2/MixtureVAE/log_files/log_test_vae_kl_codec_100_256bn/config.json"
-log_root="/data/romit/alan/MixtureVAE/log_files/log_unsupervised"
+log_root="/data/romit/alan/MixtureVAE/log_files/log_unsupervised_final3_freeze"
 
 
 # export PYTHONPATH=/media/synrg/NVME-2TB/alanweiyang/MixVAE
@@ -18,8 +19,8 @@ log_root="/data/romit/alan/MixtureVAE/log_files/log_unsupervised"
 # log_root="/media/synrg/NVME-2TB/alanweiyang/MixVAE/log_files/log_subband2"
 
 
-echo "Train model...train_mixturevae.....unsupervised trainng case"
-python3 ../train_mixture_source_vae_semi_supervised.py \
+echo "Train model...train_mixturevae.....unsupervised trainng case, freezing v3~~~~~~~~~~~~~!!!!!!!!!!!!!!"
+python3 ../train_mixture_source_vae_semi_supervised_v3.py \
     --musdb_root ${musdb_root_path}\
     --vocalset_root ${vocalset_root_path}\
     --config ${config_path} \
@@ -28,5 +29,7 @@ python3 ../train_mixture_source_vae_semi_supervised.py \
     --summary_interval 5 \
     --validation_interval 1500 \
     --training_epochs 5000 \
-    --supervised_steps 5000 \
+    --supervised_steps 0 \
+    --lr_decay_step 500 \
+    --update_ratio 10000 \
     --stdout_interval 5 \
