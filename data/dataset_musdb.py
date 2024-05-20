@@ -85,7 +85,59 @@ class dataset_musdb(Dataset):
             if self.mixture:
                 batch["mixture"] = librosa.resample(track.audio.T[0,:], orig_sr=track.rate, target_sr=self.sample_rate)
             break
+
         return batch
+    
+        # if self.mode == 'validation':
+        #     while True:
+        #         valid=True
+        #         # setup starting point
+        #         if self.mode=='train':
+        #             track.chunk_start = random.uniform(0, track.duration - track.chunk_duration)
+        #         elif self.mode=='validation':
+        #             track.chunk_start = track.chunk_start + self.seconds
+        #             assert track.chunk_start + self.seconds < track.duration, 'sample contains no sound'                
+                        
+                
+        #         batch = {}
+        #         for source_type in self.source_types:
+        #             current_audio = librosa.resample(track.targets[source_type].audio.T[0,:], orig_sr=track.rate, target_sr=self.sample_rate)
+        #             signal_power = (current_audio**2).mean()
+        #             if signal_power < self.signal_power_threshold[source_type]: # the whole segment is silent
+        #                 valid=False
+        #                 # print(idx, source_type, 'fail this time, start changing')
+        #                 # sf.write('sounds/failures/'+source_type+str(idx)+'.wav', current_audio, 16000)
+        #                 break
+        #             batch[source_type] = current_audio
+        #         if not valid:
+        #             continue
+        #         if self.mixture:
+        #             batch["mixture"] = librosa.resample(track.audio.T[0,:], orig_sr=track.rate, target_sr=self.sample_rate)
+        #         break
+
+        # else:
+
+        #     # setup starting point
+        #     if self.mode=='train':
+        #         track.chunk_start = random.uniform(0, track.duration - track.chunk_duration)
+        #     elif self.mode=='validation':
+        #         track.chunk_start = track.chunk_start + self.seconds
+                    
+            
+        #     batch = {}
+        #     for source_type in self.source_types:
+        #         current_audio = librosa.resample(track.targets[source_type].audio.T[0,:], orig_sr=track.rate, target_sr=self.sample_rate)
+        #         signal_power = (current_audio**2).mean()
+        #         # if signal_power < self.signal_power_threshold[source_type]: # the whole segment is silent
+        #         #     batch[source_type] = None
+        #         # else:
+        #         batch[source_type] = current_audio
+
+        #     if self.mixture:
+        #         batch["mixture"] = librosa.resample(track.audio.T[0,:], orig_sr=track.rate, target_sr=self.sample_rate)
+
+
+        # return batch
         
 def collate_func_musdb(batches):
     '''
@@ -124,17 +176,20 @@ if __name__=='__main__':
         root_dir='/data/romit/alan/musdb18',
         sample_rate=16000,
         mode='train',
-        source_types=['vocals', 'drums', 'bass', 'other'],
+        source_types=['bass'],
         mixture=True,
         seconds=4,
         len_ds=100
         )
+    # for i in range(len(dataset)):
+    #     print(i)
+    #     dataset[i]
     batch = dataset[0]
-    batch = collate_func_musdb([dataset[0], dataset[1]])
-    for key in batch.keys():
-        print(key, batch[key].shape, type(batch[key]))
-        if type(batch[key])==torch.Tensor:
-            print(batch[key].shape)
+    # batch = collate_func_musdb([dataset[0], dataset[1]])
+    # for key in batch.keys():
+    #     print(key, batch[key].shape, type(batch[key]))
+    #     if type(batch[key])==torch.Tensor:
+    #         print(batch[key].shape)
     # sf.write('other'+'.wav', batch['other'], 16000)
     # c = {}
     # source_types=['vocals', 'drums', 'bass', 'other']

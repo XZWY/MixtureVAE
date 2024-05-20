@@ -355,7 +355,7 @@ def generator_loss(disc_outputs):
     for dg in disc_outputs:
         l = torch.mean((1 - dg)**2)
         gen_losses.append(l)
-        loss += l
+        loss = loss + l
 
     return loss, gen_losses
 

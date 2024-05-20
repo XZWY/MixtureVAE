@@ -46,12 +46,12 @@
 
 export PYTHONPATH=/data/romit/alan/MixtureVAE
 
-export CUDA_VISIBLE_DEVICES=1,2
+export CUDA_VISIBLE_DEVICES=5,4
 musdb_root_path='/data/romit/alan/musdb18'
 vocalset_root_path='/data/romit/alan/vocalset11'
-config_path="/data/romit/alan/MixtureVAE/config_SourceVAE_sb2_drum.json"
+config_path="/data/romit/alan/MixtureVAE/config_SourceVAE_sb2_bass.json"
 # config_path="/ws/ifp-54_2/hasegawa/xulinf2/MixtureVAE/log_files/log_test_vae_kl_codec_100_256bn/config.json"
-log_root="/data/romit/alan/MixtureVAE/log_files/log_sb_drum"
+log_root="/data/romit/alan/MixtureVAE/log_files/log_sb_bass_scratch_snr_loss"
 
 
 # export PYTHONPATH=/media/synrg/NVME-2TB/alanweiyang/MixVAE
@@ -65,7 +65,7 @@ log_root="/data/romit/alan/MixtureVAE/log_files/log_sb_drum"
 
 
 echo "Train model...train_source_vae_sb2"
-python3 train_source_vae_sb2.py \
+python3 train_source_vae_sb2_l1.py \
     --musdb_root ${musdb_root_path}\
     --vocalset_root ${vocalset_root_path}\
     --config ${config_path} \

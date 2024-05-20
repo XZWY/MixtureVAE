@@ -23,6 +23,7 @@ class MixtureVAE(nn.Module):
         self.source_type = h.source_type
         self.MixEncoder = MixtureEncoder(
             channels=[2, 64, 64, 64, 64, 128, 128],
+            # channels=[2, 128, 128, 128, 256, 256, 256],
             bottleneck_dim=h.bottleneck_dimension
         )
 
@@ -52,7 +53,20 @@ class MixtureVAE(nn.Module):
         source_dec = self.sourcevae.decode(z)
         return source_dec
 
-    def forward(self, batch, sample_posterior=True, decode=False, train_source_decoder=False, train_source_encoder=False):
+    def separate(self, batch, sample_posterior=True):
+        posterior = self.encode(batch['mixture_fma'])
+        if sample_posterior:
+            z_out = posterior.sample()
+        else:
+            z_out = posterior.mode()
+        batch[self.source_type+'_unsupervised_kl'] = posterior.kl()
+        batch[self.source_type+'_dec_fma'] = self.decode(z_out)
+        return batch
+
+    def freeze_source_vae(self):
+        pass
+
+    def forward(self, batch, separate=False, sample_posterior=True, decode=False, train_source_decoder=False, train_source_encoder=False, freeze_source_vae=False):
         '''
             forward mostly for training:
                 decode: whether we want to decode source signals, decode would also create a decoded mixture_hat, which is a sum of decoded sources
@@ -70,6 +84,17 @@ class MixtureVAE(nn.Module):
 
 
         '''
+
+        if separate:
+            posterior = self.encode(batch['mixture_fma'])
+            if sample_posterior:
+                z_out = posterior.sample()
+            else:
+                z_out = posterior.mode()
+            batch[self.source_type+'_unsupervised_kl'] = posterior.kl()
+            batch[self.source_type+'_dec_fma'] = self.decode(z_out)
+            return batch
+
         input = batch['mixture']#.clone() # bs, 1, T
 
         posterior_mix = self.encode(input)
@@ -163,27 +188,29 @@ if __name__=='__main__':
         print(key, batch[key].shape)
         batch[key] = batch[key].cuda(1)
 
-    ckpt_dir = '/data/romit/alan/MixtureVAE/ckpt_source_vae'
-    # ckpt_vocals = torch.load(os.path.join(ckpt_dir, 'ckpt_vocals'))
-    # ckpt_drums = torch.load(os.path.join(ckpt_dir, 'ckpt_drums'))
-    # ckpt_bass = torch.load(os.path.join(ckpt_dir, 'ckpt_bass'))
-    ckpt_other = torch.load(os.path.join(ckpt_dir, 'ckpt_other'))
-    # sourcevae_ckpts = {
-    #     'vocals':ckpt_vocals, 'drums':ckpt_drums, 'bass':ckpt_bass, 'other':ckpt_other
-    # }
-    model_ckpt_dir = '/data/romit/alan/MixtureVAE/log_files/log_mixvae_other/ckpt_pretrained_mixvae_50000'
-    model_ckpt = torch.load(model_ckpt_dir)
+    # ckpt_dir = '/data/romit/alan/MixtureVAE/ckpt_source_vae'
+    # # ckpt_vocals = torch.load(os.path.join(ckpt_dir, 'ckpt_vocals'))
+    # # ckpt_drums = torch.load(os.path.join(ckpt_dir, 'ckpt_drums'))
+    # # ckpt_bass = torch.load(os.path.join(ckpt_dir, 'ckpt_bass'))
+    # ckpt_other = torch.load(os.path.join(ckpt_dir, 'ckpt_other'))
+    # # sourcevae_ckpts = {
+    # #     'vocals':ckpt_vocals, 'drums':ckpt_drums, 'bass':ckpt_bass, 'other':ckpt_other
+    # # }
+    # model_ckpt_dir = '/data/romit/alan/MixtureVAE/log_files/log_mixvae_other/ckpt_pretrained_mixvae_50000'
+    # model_ckpt = torch.load(model_ckpt_dir)
     # sourcevae = SourceVAE(h)
     # sourcevae.source_type = 'other'
     # sourcevae.load_state_dict(sourcevae_ckpts['other']['sourcevae'])
-    mixturevae = MixtureVAE(h, load_model=True, model_ckpt=model_ckpt, load_source_vae=True, sourcevae_ckpt=ckpt_other).cuda(1)
+    mixturevae = MixtureVAE(h, load_model=False, model_ckpt=None, load_source_vae=False, sourcevae_ckpt=None).cuda(1)
     # for n, p in mixturevae.named_parameters():
     #     print(n, p.shape, 'MixEncoder' in n)
     print('--------------------------------')
     # g_parameters = get_parameters(mixturevae, 'MixEncoder')
     # for p in g_parameters:
     #     print(p.shape)
+    total_params = sum(p.numel() for p in mixturevae.parameters() if p.requires_grad)
 
+    print(f"Total trainable parameters: {total_params}")
     # device = "cuda:6"
     # ckpt = torch.load('/data/romit/alan/MixtureVAE/log_files/log_mixvae_trial/g_00000000', map_location=device)
     # print(ckpt.keys())

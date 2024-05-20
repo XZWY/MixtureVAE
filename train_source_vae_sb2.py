@@ -420,7 +420,7 @@ def main():
     parser.add_argument('--checkpoint_interval', default=5000, type=int)
     parser.add_argument('--summary_interval', default=100, type=int)
     parser.add_argument('--validation_interval', default=5000, type=int)
-    parser.add_argument('--num_ckpt_keep', default=5, type=int)
+    parser.add_argument('--num_ckpt_keep', default=1, type=int)
     parser.add_argument('--fine_tuning', default=False, type=bool)
 
     a = parser.parse_args()

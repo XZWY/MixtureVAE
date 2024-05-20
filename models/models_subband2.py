@@ -209,7 +209,7 @@ class Generator(torch.nn.Module):
         # bs, 2, T, F
         
         x = x.permute(0,3,2,1).contiguous()
-        x = torch.istft(torch.view_as_complex(x), n_fft=640, hop_length=160, win_length=640, window=self.window.to(x.device), center=True, normalized=False, onesided=None, length=None, return_complex=False)
+        x = torch.istft(torch.view_as_complex(x.float()), n_fft=640, hop_length=160, win_length=640, window=self.window.to(x.device), center=True, normalized=False, onesided=None, length=None, return_complex=False)
         
         x = x.unsqueeze(1)
         

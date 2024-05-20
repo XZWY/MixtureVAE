@@ -61,7 +61,7 @@ def train(rank, a, h):
     
     ckpt_source = torch.load(os.path.join(h.sourcevae_ckpt_dir, 'ckpt_'+h.source_type))
 
-    mixtureVAE = MixtureVAE(h, load_source_vae=True, sourcevae_ckpt=ckpt_source).to(device)
+    mixtureVAE = MixtureVAE(h, load_model=False, model_ckpt=None, load_source_vae=True, sourcevae_ckpt=ckpt_source).to(device)
 
     # mpd = MultiPeriodDiscriminator().to(device)
     # msd = MultiScaleDiscriminator().to(device)
@@ -156,7 +156,7 @@ def train(rank, a, h):
             source_types=['vocals', 'drums', 'bass', 'other'],
             mixture=True,
             seconds=h.seconds,
-            len_ds=5000
+            len_ds=50
         )
         validation_loader = DataLoader(
             validset,
@@ -250,7 +250,7 @@ def train(rank, a, h):
                     # sw.add_scalar("training/l1_loss", loss_l1, steps)
 
                 # Validation
-                if steps % a.validation_interval == 0 and steps != 0:
+                if steps % a.validation_interval == 0:
                     mixtureVAE.eval()
                     torch.cuda.empty_cache()
                     val_err_tot = 0
@@ -265,6 +265,7 @@ def train(rank, a, h):
                                 if type(batch[key])==torch.Tensor:
                                     batch[key] = torch.autograd.Variable(batch[key].to(device, non_blocking=True))
 
+                            print(j, 'validation')
                             batch = mixtureVAE(batch, sample_posterior=True, decode=True, train_source_decoder=False, train_source_encoder=True)
 
                             # groundtruth sources
@@ -344,7 +345,7 @@ def main():
     parser.add_argument('--checkpoint_interval', default=5000, type=int)
     parser.add_argument('--summary_interval', default=100, type=int)
     parser.add_argument('--validation_interval', default=5000, type=int)
-    parser.add_argument('--num_ckpt_keep', default=5, type=int)
+    parser.add_argument('--num_ckpt_keep', default=1, type=int)
     parser.add_argument('--fine_tuning', default=False, type=bool)
 
     a = parser.parse_args()

@@ -180,6 +180,7 @@ def train(rank, a, h):
     plot_gt_once = False
     mixtureVAE.train()
 
+    mstftd.train()
     mpd.train()
     msd.train()
     for epoch in range(max(0, last_epoch), a.training_epochs):
