@@ -71,7 +71,6 @@ class SourceVAE(nn.Module):
     ):
         super().__init__()
 
-        self.source_type = h.source_type
         self.encoder = Encoder(
             channels=[2, 64, 64, 64, 64, 64, 64],
             bottleneck_dim=h.bottleneck_dimension
@@ -100,8 +99,9 @@ class SourceVAE(nn.Module):
 
     def forward(self, batch, sample_posterior=True):
     
-        input = batch[self.source_type]#.clone() # bs, 1, T
+        input = torch.cat([batch['vocals'], batch['drums'], batch['bass'], batch['other']], dim=0)#.clone() # bs, 1, T
         ref = input.clone()
+        batch['reference'] = ref
 
         posterior = self.encode(input) # encode scaled input (0.05, 0.95)
         if sample_posterior:
