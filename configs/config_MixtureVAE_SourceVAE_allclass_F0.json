@@ -1,18 +1,21 @@
 {
     "source_type": "bass",
+    "mixvae_ckpt_dir":"/data/romit/alan/MixtureVAE/log_files/log_mixvae_bass/ckpt_pretrained_mixvae_25000_bass",
     "sourcevae_ckpt_dir":"/data/romit/alan/MixtureVAE/ckpt_source_vae",
+    "do_ckpt_path":"/data/romit/alan/MixtureVAE/ckpt_source_vae/ckpt_do",
     "resblock": "1",
-    "num_gpus": 4,
-    "batch_size": 48,
-    "learning_rate": 0.0004,
+    "num_gpus": 3,
+    "batch_size": 3,
+    "learning_rate": 0.0002,
     "adam_b1": 0.5,
     "adam_b2": 0.9,
     "lr_decay": 0.98,
     "seed": 1234,
     "codec_loss": false,
-    "lambda_kl": 100,
+    "lambda_kl": 5,
+    "lambda_posterior": 50,
 
-    "seconds":4,
+    "seconds":3,
 
     "upsample_rates": [8,5,4,2],
     "upsample_kernel_sizes": [16,11,8,4],
@@ -42,7 +45,7 @@
 
     "dist_config": {
         "dist_backend": "nccl",
-        "dist_url": "tcp://localhost:54389",
+        "dist_url": "tcp://localhost:51285",
         "world_size": 1
     }
 }

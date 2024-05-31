@@ -1,11 +1,12 @@
 export PYTHONPATH=/data/romit/alan/MixtureVAE
+export TMPDIR=/data/romit/alan/MixtureVAE/tmpdir
 
 export CUDA_VISIBLE_DEVICES=7,6,5,4
 musdb_root_path='/data/romit/alan/musdb18'
 vocalset_root_path='/data/romit/alan/vocalset11'
-config_path="/data/romit/alan/MixtureVAE/configs/config_MixtureVAE_SourceVAE_bass.json"
+config_path="/data/romit/alan/MixtureVAE/configs/config_supervised_allclass_F0.json"
 # config_path="/ws/ifp-54_2/hasegawa/xulinf2/MixtureVAE/log_files/log_test_vae_kl_codec_100_256bn/config.json"
-log_root="/data/romit/alan/MixtureVAE/log_files/log_mixvae_sourcevae_bas_snr"
+log_root="/data/romit/alan/MixtureVAE/log_files/log_supervised_allclass_F0_posterior_only"
 
 
 # export PYTHONPATH=/media/synrg/NVME-2TB/alanweiyang/MixVAE
@@ -18,15 +19,15 @@ log_root="/data/romit/alan/MixtureVAE/log_files/log_mixvae_sourcevae_bas_snr"
 # log_root="/media/synrg/NVME-2TB/alanweiyang/MixVAE/log_files/log_subband2"
 
 
-echo "Train model...train_mixturevae..sourcevae...single case, bass"
-python3 ../train_mixture_source_vae_single_snr.py \
+echo "Train model...train_mixturevae sourcevae.....all class, F0, supervised training, posterior only"
+python3 ../training/train_supervised_allclass_F0.py \
     --musdb_root ${musdb_root_path}\
     --vocalset_root ${vocalset_root_path}\
     --config ${config_path} \
     --checkpoint_path ${log_root} \
     --checkpoint_interval 5000 \
     --summary_interval 5 \
-    --validation_interval 2000 \
+    --validation_interval 1500 \
     --training_epochs 5000 \
     --vanilla_steps 50000 \
     --stdout_interval 5 \

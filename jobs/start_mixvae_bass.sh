@@ -1,11 +1,12 @@
 export PYTHONPATH=/data/romit/alan/MixtureVAE
+export TMPDIR=/data/romit/alan/MixtureVAE/tmpdir
 
 export CUDA_VISIBLE_DEVICES=7,6,5,4
 musdb_root_path='/data/romit/alan/musdb18'
 vocalset_root_path='/data/romit/alan/vocalset11'
 config_path="/data/romit/alan/MixtureVAE/configs/config_MixtureVAE_bass.json"
 # config_path="/ws/ifp-54_2/hasegawa/xulinf2/MixtureVAE/log_files/log_test_vae_kl_codec_100_256bn/config.json"
-log_root="/data/romit/alan/MixtureVAE/log_files/log_mixvae_bass_larger"
+log_root="/data/romit/alan/MixtureVAE/log_files/log_mixvae_bass_snr"
 
 
 # export PYTHONPATH=/media/synrg/NVME-2TB/alanweiyang/MixVAE

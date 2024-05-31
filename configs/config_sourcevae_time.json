@@ -1,16 +1,15 @@
 {
-    "source_type": "bass",
-    "sourcevae_ckpt_dir":"/data/romit/alan/MixtureVAE/ckpt_source_vae",
+    "source_type": "null",
     "resblock": "1",
-    "num_gpus": 4,
-    "batch_size": 48,
-    "learning_rate": 0.0004,
+    "num_gpus": 2,
+    "batch_size": 4,
+    "learning_rate": 0.00015,
     "adam_b1": 0.5,
     "adam_b2": 0.9,
     "lr_decay": 0.98,
     "seed": 1234,
     "codec_loss": false,
-    "lambda_kl": 100,
+    "lambda_kl": 0.1,
 
     "seconds":4,
 
@@ -42,7 +41,7 @@
 
     "dist_config": {
         "dist_backend": "nccl",
-        "dist_url": "tcp://localhost:54389",
+        "dist_url": "tcp://localhost:54321",
         "world_size": 1
     }
 }
